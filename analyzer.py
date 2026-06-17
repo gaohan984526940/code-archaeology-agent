@@ -72,16 +72,16 @@ def _format_commit_list(commits: list[CommitInfo], limit: int = 300) -> str:
 
 
 def _analyze_business_evolution(client: OpenAI, data: RepoData) -> str:
-    system = """You are a "Code Archaeologist" — an expert at reading git history like a detective reading a crime scene.
-Your task: reconstruct the BUSINESS and PRODUCT story hidden inside commit history.
+    system = """你是一名"代码考古学家"——像侦探勘察案发现场一样解读 git 历史。
+你的任务：从提交历史中重建隐藏的业务演进故事。
 
-Rules:
-- Infer WHY decisions were made, not just WHAT changed
-- Look for patterns: burst activity (launch/crisis), quiet periods (maintenance), massive refactors (debt payment)
-- Name specific time periods: "The Bootstrap Era (2018-2019)", "The Scaling Crisis (Q3 2020)"
-- Write in vivid, narrative prose — this should read like a history book, not a changelog
-- Output in the SAME language as the commit messages (if Chinese commits → Chinese output, if English → English)
-- Be specific about dates and commit counts as evidence"""
+规则：
+- 推断决策背后的"为什么"，而不只是描述"做了什么"
+- 识别规律：爆发式活跃（上线/危机）、平静期（维护）、大规模重构（还技术债）
+- 给每个阶段命名，例如："创业期（2018-2019）"、"扩张危机（2020 年 Q3）"
+- 用生动的叙事散文写作——读起来要像历史书，不是 changelog
+- 【重要】无论提交信息是什么语言，报告必须全程用中文输出
+- 用具体日期和提交数量作为证据支撑论点"""
 
     yearly = "\n".join(
         f"  {year}: {count} commits" for year, count in data.yearly_commit_counts.items()
@@ -101,20 +101,20 @@ Rules:
 **Commit sample (time-balanced)**:
 {commit_sample}
 
-Produce a vivid narrative of the project's lifecycle:
-1. Identify distinct phases (Bootstrap / Growth / Crisis / Maturity / Decline etc.)
-2. For each phase: what was the team building? what pressures were they under?
-3. What were the 3-5 most pivotal moments in the project's history?
-4. What does the commit rhythm tell us about the team culture?"""
+用中文写出项目生命周期的生动叙述：
+1. 识别不同阶段（创业期 / 成长期 / 危机期 / 成熟期 / 衰退期等）
+2. 每个阶段：团队在构建什么？面临什么压力？
+3. 项目历史中最关键的 3-5 个转折点是什么？
+4. 提交节奏揭示了怎样的团队文化？"""
 
     return _call_claude(client, system, user)
 
 
 def _analyze_module_stories(client: OpenAI, data: RepoData) -> str:
-    system = """You are a Code Archaeologist specializing in module-level forensics.
-For each file/module, tell its LIFE STORY: birth, struggles, transformations, and current state.
-Focus on WHY the module evolved the way it did — what business needs drove each wave of changes?
-Output in the SAME language as the commit messages."""
+    system = """你是一名专注于模块级取证的代码考古学家。
+对每个文件/模块，讲述它的"生命故事"：诞生、挣扎、演变和当前状态。
+重点关注该模块为何以这种方式演进——是什么业务需求推动了每一波变化？
+【重要】无论提交信息是什么语言，输出必须全程用中文。"""
 
     hotspot_lines = []
     for h in data.hotspots[:15]:
@@ -137,21 +137,21 @@ Output in the SAME language as the commit messages."""
 **Directory activity map**:
 {chr(10).join(directory_lines)}
 
-For each of the top 8 hotspot files, write a "Module History Card":
-- When was it born and why?
-- What major transformations did it undergo?
-- Is it a "sacred cow" (touched constantly, never refactored) or a "zombie" (abandoned but still running)?
-- What does the author pattern tell us? (single owner = knowledge silo? many authors = contested ground?)
-- Current assessment: stable foundation, active development, or ticking time bomb?"""
+对 Top 8 热点文件，用中文各写一张"模块历史卡片"：
+- 它何时诞生，为什么诞生？
+- 经历了哪些重大变化？
+- 是"神圣之牛"（频繁修改但从不重构）还是"僵尸"（已废弃但仍在运行）？
+- 作者模式说明了什么？（单一所有者 = 知识孤岛？多人争抢 = 高风险地带？）
+- 当前评估：稳定基础、活跃开发，还是定时炸弹？"""
 
     return _call_claude(client, system, user)
 
 
 def _analyze_anomalies(client: OpenAI, data: RepoData) -> str:
-    system = """You are a Code Archaeologist reading between the lines of git history.
-Anomalous commits are the MOST revealing artifacts — they capture moments of crisis, panic, and hard decisions.
-For each anomaly cluster, reconstruct the INCIDENT: what probably happened, why, and what it reveals about the system.
-Output in the SAME language as the commit messages."""
+    system = """你是一名从 git 历史字里行间读取信息的代码考古学家。
+异常提交是最具揭示性的文物——它们记录了危机、恐慌和艰难决策的瞬间。
+对每个异常提交群，还原"事件经过"：可能发生了什么、为什么、它揭示了系统的哪些问题。
+【重要】无论提交信息是什么语言，输出必须全程用中文。"""
 
     if not data.anomalies:
         return "No significant anomalies detected in the commit history."
@@ -174,23 +174,23 @@ Total anomalies detected: {len(data.anomalies)} / {data.total_commits} commits
 **Anomalous commits**:
 {chr(10).join(anomaly_lines)}
 
-For each anomaly (or cluster of related anomalies):
-1. What INCIDENT likely triggered this? (production outage? security breach? deadline pressure?)
-2. What does the timing tell us? (late-night = small team under pressure, business hours = planned but risky)
-3. What does the scale of change reveal? (massive revert = something went badly wrong upstream)
-4. What systemic pattern do these anomalies reveal about the codebase's health?
+对每个异常提交（或一组相关异常），用中文分析：
+1. 是什么事件可能触发了这次提交？（生产故障？安全漏洞？deadline 压力？）
+2. 时间点说明了什么？（深夜 = 小团队高压状态，工作时间 = 有计划但有风险）
+3. 变更规模揭示了什么？（大规模回滚 = 上游出了严重问题）
+4. 这些异常揭示了代码库健康状况的哪些系统性规律？
 
-End with: "Top 3 most revealing anomaly incidents and what they tell us about this project's history."
+最后用中文总结："最具揭示性的 Top 3 异常事件，以及它们对理解这个项目历史的意义。"
 """
 
     return _call_claude(client, system, user)
 
 
 def _analyze_tech_debt(client: OpenAI, data: RepoData) -> str:
-    system = """You are a Code Archaeologist mapping the "technical debt landscape" of a legacy codebase.
-TODO/FIXME/HACK comments are time capsules — they capture the moment a developer knew something was wrong but couldn't fix it.
-Your job: interpret WHAT they were constrained by and WHY they left the debt.
-Output in the SAME language as the commit messages."""
+    system = """你是一名绘制遗留代码库"技术债地图"的代码考古学家。
+TODO/FIXME/HACK 注释是时间胶囊——它们记录了开发者发现问题却无法修复的那个瞬间。
+你的任务：解读当时受到了什么约束、为什么留下这些债务。
+【重要】无论提交信息是什么语言，输出必须全程用中文。"""
 
     if not data.tech_debt_items:
         return "No TODO/FIXME/HACK markers found in the codebase."
@@ -216,14 +216,14 @@ Output in the SAME language as the commit messages."""
 **Contributor knowledge map**:
 {chr(10).join(contributor_lines)}
 
-Analyze:
-1. **Debt Clusters**: Group the TODOs/FIXMEs by theme — what categories of problems were systematically deferred?
-2. **Historical Constraints**: Which debt items hint at external constraints? (legacy API? database limitations? browser compat?)
-3. **Knowledge Silos**: Based on contributor patterns, who "owns" which parts? What happens if they leave?
-4. **The "Untouchable" Zones**: Which files/modules appear frozen in time — many reads, no changes? Why?
-5. **Risk Assessment**: Rank the top 5 most dangerous debt items and explain why they're ticking time bombs.
+用中文分析以下内容：
+1. **债务聚类**：按主题分组 TODO/FIXME——哪些类型的问题被系统性地推迟了？
+2. **历史约束**：哪些债务项暗示了外部约束？（旧 API？数据库限制？浏览器兼容？）
+3. **知识孤岛**：根据贡献者模式，谁"拥有"哪些模块？他们离职后会发生什么？
+4. **"禁区"**：哪些文件/模块看似被冻结——被大量依赖却从不修改？为什么？
+5. **风险评估**：列出最危险的 Top 5 债务项，并解释为什么它们是定时炸弹。
 
-End with: "Recommendations for the next engineer who inherits this codebase."
+最后用中文给出："写给下一个接手这个代码库的工程师的建议。"
 """
 
     return _call_claude(client, system, user)
