@@ -1,16 +1,16 @@
-"""LLM archaeology inference layer using Claude API."""
+"""LLM archaeology inference layer — DeepSeek API (OpenAI-compatible)."""
 
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 
-import anthropic
+from openai import OpenAI
 
 from git_extractor import RepoData, CommitInfo
 
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "deepseek-chat"
 MAX_TOKENS = 4096
 
 
@@ -23,7 +23,10 @@ class AnalysisResult:
 
 
 def analyze_repo(data: RepoData) -> AnalysisResult:
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client = OpenAI(
+        api_key=os.environ["DEEPSEEK_API_KEY"],
+        base_url="https://api.deepseek.com",
+    )
 
     print("  [1/4] Analyzing business evolution timeline...")
     business_evolution = _analyze_business_evolution(client, data)
@@ -45,14 +48,16 @@ def analyze_repo(data: RepoData) -> AnalysisResult:
     )
 
 
-def _call_claude(client: anthropic.Anthropic, system: str, user: str) -> str:
-    response = client.messages.create(
+def _call_claude(client: OpenAI, system: str, user: str) -> str:
+    response = client.chat.completions.create(
         model=MODEL,
         max_tokens=MAX_TOKENS,
-        system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
     )
-    return response.content[0].text
+    return response.choices[0].message.content
 
 
 def _format_commit_list(commits: list[CommitInfo], limit: int = 300) -> str:
@@ -66,7 +71,7 @@ def _format_commit_list(commits: list[CommitInfo], limit: int = 300) -> str:
     return "\n".join(lines)
 
 
-def _analyze_business_evolution(client: anthropic.Anthropic, data: RepoData) -> str:
+def _analyze_business_evolution(client: OpenAI, data: RepoData) -> str:
     system = """You are a "Code Archaeologist" — an expert at reading git history like a detective reading a crime scene.
 Your task: reconstruct the BUSINESS and PRODUCT story hidden inside commit history.
 
@@ -105,7 +110,7 @@ Produce a vivid narrative of the project's lifecycle:
     return _call_claude(client, system, user)
 
 
-def _analyze_module_stories(client: anthropic.Anthropic, data: RepoData) -> str:
+def _analyze_module_stories(client: OpenAI, data: RepoData) -> str:
     system = """You are a Code Archaeologist specializing in module-level forensics.
 For each file/module, tell its LIFE STORY: birth, struggles, transformations, and current state.
 Focus on WHY the module evolved the way it did — what business needs drove each wave of changes?
@@ -142,7 +147,7 @@ For each of the top 8 hotspot files, write a "Module History Card":
     return _call_claude(client, system, user)
 
 
-def _analyze_anomalies(client: anthropic.Anthropic, data: RepoData) -> str:
+def _analyze_anomalies(client: OpenAI, data: RepoData) -> str:
     system = """You are a Code Archaeologist reading between the lines of git history.
 Anomalous commits are the MOST revealing artifacts — they capture moments of crisis, panic, and hard decisions.
 For each anomaly cluster, reconstruct the INCIDENT: what probably happened, why, and what it reveals about the system.
@@ -181,7 +186,7 @@ End with: "Top 3 most revealing anomaly incidents and what they tell us about th
     return _call_claude(client, system, user)
 
 
-def _analyze_tech_debt(client: anthropic.Anthropic, data: RepoData) -> str:
+def _analyze_tech_debt(client: OpenAI, data: RepoData) -> str:
     system = """You are a Code Archaeologist mapping the "technical debt landscape" of a legacy codebase.
 TODO/FIXME/HACK comments are time capsules — they capture the moment a developer knew something was wrong but couldn't fix it.
 Your job: interpret WHAT they were constrained by and WHY they left the debt.

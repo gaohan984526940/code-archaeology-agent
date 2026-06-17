@@ -28,26 +28,26 @@ def main(repo_path: str, output: str, depth: int) -> None:
     output_path = Path(output)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    click.echo(f"\n🏺 Code Archaeologist")
+    click.echo(f"\n[Code Archaeologist]")
     click.echo(f"   Repository : {repo_path}")
     click.echo(f"   Depth      : {depth} commits max")
     click.echo(f"   Output dir : {output_path.resolve()}\n")
 
     t0 = time.time()
 
-    click.echo("📂 Phase 1/3: Extracting git history...")
+    click.echo("Phase 1/3: Extracting git history...")
     data = extract_repo_data(repo_path, max_commits=depth)
-    click.echo(f"   ✓ {data.total_commits} commits | {len(data.contributors)} contributors | {len(data.anomalies)} anomalies")
+    click.echo(f"   OK {data.total_commits} commits | {len(data.contributors)} contributors | {len(data.anomalies)} anomalies")
 
-    click.echo("\n🔍 Phase 2/3: LLM archaeology inference...")
+    click.echo("\nPhase 2/3: LLM archaeology inference...")
     result = analyze_repo(data)
-    click.echo("   ✓ 4 analysis tasks complete")
+    click.echo("   OK 4 analysis tasks complete")
 
-    click.echo("\n📝 Phase 3/3: Generating Markdown report...")
+    click.echo("\nPhase 3/3: Generating Markdown report...")
     report_file = generate_report(data, result, output_dir=str(output_path))
 
     elapsed = time.time() - t0
-    click.echo(f"\n✅ Done in {elapsed:.1f}s")
+    click.echo(f"\nDone in {elapsed:.1f}s")
     click.echo(f"   Report saved to: {report_file}\n")
 
 
